@@ -388,7 +388,7 @@ namespace wi::profiler
 			x.second.total_time = 0;
 		}
 
-		wi::font::Params params = wi::font::Params(x, y + (graph_size.y + graph_padding_y) * 2, wi::font::WIFONTSIZE_DEFAULT - 6, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, text_color);
+		wi::font::Params params = wi::font::Params(x, y + (graph_size.y + graph_padding_y) * 2, wi::font::WIFONTSIZE_DEFAULT - 2, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, text_color);
 
 		// Background:
 		wi::image::Params fx;
