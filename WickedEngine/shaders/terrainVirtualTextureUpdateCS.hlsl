@@ -8,6 +8,8 @@ PUSHCONSTANT(push, TerrainVirtualTexturePush);
 #define UPDATE_BASECOLORMAP
 #endif
 
+static const float texture_scale = 2.0f;
+
 static const uint2 block_offsets[16] = {
 	uint2(0, 0), uint2(1, 0), uint2(2, 0), uint2(3, 0),
 	uint2(0, 1), uint2(1, 1), uint2(2, 1), uint2(3, 1),
@@ -74,12 +76,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (material.textures[BASECOLORMAP].IsValid())
 			{
 				Texture2D tex = bindless_textures[descriptor_index(material.textures[BASECOLORMAP].texture_descriptor)];
-				float2 dim = 0;
-				tex.GetDimensions(dim.x, dim.y);
-				float2 diff = dim * push.resolution_rcp;
-				float lod = log2(max(diff.x, diff.y));
-				float2 overscale = lod < 0 ? diff : 1;
-				half4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod);
+				half4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv2 * texture_scale, 0);
 				baseColor *= baseColorMap;
 			}
 			total_color = mad(1 - accumulation, weight * baseColor, total_color);
@@ -93,12 +90,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (material.textures[NORMALMAP].IsValid())
 			{
 				Texture2D tex = bindless_textures[descriptor_index(material.textures[NORMALMAP].texture_descriptor)];
-				float2 dim = 0;
-				tex.GetDimensions(dim.x, dim.y);
-				float2 diff = dim * push.resolution_rcp;
-				float lod = log2(max(diff.x, diff.y));
-				float2 overscale = lod < 0 ? diff : 1;
-				half2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod).rg;
+				half2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv2 * texture_scale, 0).rg;
 				total_color.rg = mad(1 - accumulation, weight * normalMap, total_color.rg);
 				accumulation = mad(1 - weight, accumulation, weight);
 				if(accumulation >= 1)
@@ -112,12 +104,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (material.textures[SURFACEMAP].IsValid())
 			{
 				Texture2D tex = bindless_textures[descriptor_index(material.textures[SURFACEMAP].texture_descriptor)];
-				float2 dim = 0;
-				tex.GetDimensions(dim.x, dim.y);
-				float2 diff = dim * push.resolution_rcp;
-				float lod = log2(max(diff.x, diff.y));
-				float2 overscale = lod < 0 ? diff : 1;
-				half4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod);
+				half4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv2 * texture_scale, 0);
 				surface *= surfaceMap;
 			}
 			total_color = mad(1 - accumulation, weight * surface, total_color);
@@ -132,12 +119,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (material.textures[EMISSIVEMAP].IsValid())
 			{
 				Texture2D tex = bindless_textures[descriptor_index(material.textures[EMISSIVEMAP].texture_descriptor)];
-				float2 dim = 0;
-				tex.GetDimensions(dim.x, dim.y);
-				float2 diff = dim * push.resolution_rcp;
-				float lod = log2(max(diff.x, diff.y));
-				float2 overscale = lod < 0 ? diff : 1;
-				half4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod);
+				half4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, uv2 * texture_scale, 0);
 				emissiveColor.rgb = emissiveMap.rgb * emissiveMap.a;
 				emissiveColor.a = emissiveMap.a;
 			}
