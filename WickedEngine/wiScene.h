@@ -334,7 +334,8 @@ namespace wi::scene
 		//	returns new root entity if attached is set to true, otherwise returns INVALID_ENTITY
 		virtual wi::ecs::Entity Instantiate(Scene& prefab, bool attached = false);
 		// Finds all entities in the scene that have any components attached
-		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
+		//	exclude_terrain_chunks	: if true, excludes terrain chunkGroupEntity and all its descendants
+		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities, bool exclude_terrain_chunks = false) const;
 
 		// Removes (deletes) a specific entity from the scene (if it exists):
 		//	recursive	: also removes children if true

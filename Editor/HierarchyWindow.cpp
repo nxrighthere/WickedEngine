@@ -71,7 +71,7 @@ void HierarchyWindow::SetEntity(Entity entity)
 	Scene& scene = editor->GetCurrentScene();
 
 	entities.clear();
-	scene.FindAllEntities(entities);
+	scene.FindAllEntities(entities, true);
 
 	parentCombo.ClearItems();
 	parentCombo.AddItem("NO PARENT " ICON_DISABLED);
@@ -113,7 +113,7 @@ void HierarchyWindow::SetEntity(Entity entity)
 void HierarchyWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	
+
 	parentCombo.SetPos(XMFLOAT2(60, 4));
 	parentCombo.SetSize(XMFLOAT2(GetSize().x - 86, parentCombo.GetSize().y));
 }

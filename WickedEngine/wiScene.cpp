@@ -1161,11 +1161,39 @@ namespace wi::scene
 
 		return rootEntity;
 	}
-	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
+	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities, bool exclude_terrain_chunks) const
 	{
 		for (auto& entry : componentLibrary.entries)
 		{
 			entities.insert(entry.second.component_manager->GetEntityArray().begin(), entry.second.component_manager->GetEntityArray().end());
+		}
+
+		if (exclude_terrain_chunks)
+		{
+			// Exclude terrain chunk entities
+			for (size_t i = 0; i < terrains.GetCount(); ++i)
+			{
+				const wi::terrain::Terrain& terrain = terrains[i];
+				if (terrain.chunkGroupEntity != INVALID_ENTITY)
+				{
+					// Remove chunkGroupEntity itself
+					entities.erase(terrain.chunkGroupEntity);
+
+					// Remove all descendants of chunkGroupEntity
+					wi::vector<Entity> entities_to_remove;
+					for (const Entity entity : entities)
+					{
+						if (Entity_IsDescendant(entity, terrain.chunkGroupEntity))
+						{
+							entities_to_remove.push_back(entity);
+						}
+					}
+					for (const Entity entity : entities_to_remove)
+					{
+						entities.erase(entity);
+					}
+				}
+			}
 		}
 	}
 
@@ -3819,7 +3847,7 @@ namespace wi::scene
 				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
-			// The transform world matrices are in world space, but skinning needs them in armature-local space, 
+			// The transform world matrices are in world space, but skinning needs them in armature-local space,
 			//	so that the skin is reusable for instanced meshes.
 			//	We remove the armature's world matrix from the bone world matrix to obtain the bone local transform
 			//	These local bone matrices will only be used for skinning, the actual transform components for the bones
@@ -3827,7 +3855,7 @@ namespace wi::scene
 			//
 			//	This is useful for an other thing too:
 			//	If a whole transform tree is transformed by some parent (even gltf import does that to convert from RH to LH space)
-			//	then the inverseBindMatrices are not reflected in that because they are not contained in the hierarchy system. 
+			//	then the inverseBindMatrices are not reflected in that because they are not contained in the hierarchy system.
 			//	But this will correct them too.
 			XMMATRIX R = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
@@ -4330,7 +4358,7 @@ namespace wi::scene
 
 		parallel_bounds.clear();
 		parallel_bounds.resize((size_t)wi::jobsystem::DispatchGroupCount((uint32_t)objects.GetCount(), small_subtask_groupsize));
-		
+
 		wi::jobsystem::Dispatch(ctx, (uint32_t)objects.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
 			Entity entity = objects.GetEntity(args.jobIndex);
@@ -4629,7 +4657,7 @@ namespace wi::scene
 						desc.width = object.lightmapWidth;
 						desc.height = object.lightmapHeight;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-						// Note: we need the full precision format to achieve correct accumulative blending! 
+						// Note: we need the full precision format to achieve correct accumulative blending!
 						//	But the final lightmap will be compressed into an optimal format when the rendering is finished
 						desc.format = Format::R32G32B32A32_FLOAT;
 
@@ -7071,11 +7099,11 @@ namespace wi::scene
 					// Project the center of the sphere onto the plane of the triangle.
 					XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
 
-					// Is it inside all the edges? If so we intersect because the distance 
+					// Is it inside all the edges? If so we intersect because the distance
 					// to the plane is less than the radius.
 					//XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
 
-					// Compute the cross products of the vector from the base of each edge to 
+					// Compute the cross products of the vector from the base of each edge to
 					// the point with each edge vector.
 					XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(Point0, p0), XMVectorSubtract(p1, p0));
 					XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(Point0, p1), XMVectorSubtract(p2, p1));
@@ -7098,21 +7126,21 @@ namespace wi::scene
 					// Edge 0,1
 					XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), RadiusSq));
 
 					// Edge 1,2
 					XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), RadiusSq));
 
 					// Edge 2,0
 					XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), RadiusSq));
 
@@ -7378,11 +7406,11 @@ namespace wi::scene
 					// Project the center of the sphere onto the plane of the triangle.
 					XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
 
-					// Is it inside all the edges? If so we intersect because the distance 
+					// Is it inside all the edges? If so we intersect because the distance
 					// to the plane is less than the radius.
 					//XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
 
-					// Compute the cross products of the vector from the base of each edge to 
+					// Compute the cross products of the vector from the base of each edge to
 					// the point with each edge vector.
 					XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(Point0, p0), XMVectorSubtract(p1, p0));
 					XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(Point0, p1), XMVectorSubtract(p2, p1));
@@ -7405,21 +7433,21 @@ namespace wi::scene
 					// Edge 0,1
 					XMVECTOR Point1 = DirectX::Internal::PointOnLineSegmentNearestPoint(p0, p1, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), RadiusSq));
 
 					// Edge 1,2
 					XMVECTOR Point2 = DirectX::Internal::PointOnLineSegmentNearestPoint(p1, p2, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), RadiusSq));
 
 					// Edge 2,0
 					XMVECTOR Point3 = DirectX::Internal::PointOnLineSegmentNearestPoint(p2, p0, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), RadiusSq));
 
@@ -7635,7 +7663,7 @@ namespace wi::scene
 				const XMMATRIX objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
-				
+
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex, bool doubleSided)
 				{
 					const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
@@ -7694,7 +7722,7 @@ namespace wi::scene
 						XMVECTOR t = XMVector3Dot(N, (Base - p0) / XMVectorAbs(XMVector3Dot(N, d)));
 						XMVECTOR LinePlaneIntersection = Base + d * t;
 
-						// Compute the cross products of the vector from the base of each edge to 
+						// Compute the cross products of the vector from the base of each edge to
 						// the point with each edge vector.
 						XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p0), XMVectorSubtract(p1, p0));
 						XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p1), XMVectorSubtract(p2, p1));
@@ -7769,11 +7797,11 @@ namespace wi::scene
 					// Project the center of the sphere onto the plane of the triangle.
 					XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
 
-					// Is it inside all the edges? If so we intersect because the distance 
+					// Is it inside all the edges? If so we intersect because the distance
 					// to the plane is less than the radius.
 					//XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
 
-					// Compute the cross products of the vector from the base of each edge to 
+					// Compute the cross products of the vector from the base of each edge to
 					// the point with each edge vector.
 					XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(Point0, p0), XMVectorSubtract(p1, p0));
 					XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(Point0, p1), XMVectorSubtract(p2, p1));
@@ -7796,21 +7824,21 @@ namespace wi::scene
 					// Edge 0,1
 					XMVECTOR Point1 = wi::math::ClosestPointOnLineSegment(p0, p1, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), RadiusSq));
 
 					// Edge 1,2
 					XMVECTOR Point2 = wi::math::ClosestPointOnLineSegment(p1, p2, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), RadiusSq));
 
 					// Edge 2,0
 					XMVECTOR Point3 = wi::math::ClosestPointOnLineSegment(p2, p0, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), RadiusSq));
 
@@ -7852,17 +7880,17 @@ namespace wi::scene
 							{
 								result.depth = depth;
 								XMStoreFloat3(&result.normal, intersectionVec / intersectionVecLen);
-							} 
-							else 
+							}
+							else
 							{
-								// The line segment that makes the spine of the capsule has 
-								// intersected the triangle plane, so interSectionVec ~= Zero, 
+								// The line segment that makes the spine of the capsule has
+								// intersected the triangle plane, so interSectionVec ~= Zero,
 								// and depth ~= capsule.radius.  Use the triangle normal.
-								XMVECTOR CandNorm; 
+								XMVECTOR CandNorm;
 								if (onBackside)
 								{
 									CandNorm = N;
-								} else 
+								} else
 								{
 									CandNorm = XMVectorNegate(N);
 								}
@@ -7878,11 +7906,11 @@ namespace wi::scene
 								XMVECTOR A_C = XMVector3LengthSq(Center - A);
 								XMVECTOR B_C = XMVector3LengthSq(Center - B);
 								XMVECTOR CDiff;
-								if (XMVector3Less(A_C, B_C)) 
+								if (XMVector3Less(A_C, B_C))
 								{
 									CDiff = XMVectorSubtract(A, Center);
 								}
-								else 
+								else
 								{
 									CDiff = XMVectorSubtract(B, Center);
 								}
@@ -8123,7 +8151,7 @@ namespace wi::scene
 						XMVECTOR t = XMVector3Dot(N, (Base - p0) / XMVectorAbs(XMVector3Dot(N, d)));
 						XMVECTOR LinePlaneIntersection = Base + d * t;
 
-						// Compute the cross products of the vector from the base of each edge to 
+						// Compute the cross products of the vector from the base of each edge to
 						// the point with each edge vector.
 						XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p0), XMVectorSubtract(p1, p0));
 						XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(LinePlaneIntersection, p1), XMVectorSubtract(p2, p1));
@@ -8198,11 +8226,11 @@ namespace wi::scene
 					// Project the center of the sphere onto the plane of the triangle.
 					XMVECTOR Point0 = XMVectorNegativeMultiplySubtract(N, Dist, Center);
 
-					// Is it inside all the edges? If so we intersect because the distance 
+					// Is it inside all the edges? If so we intersect because the distance
 					// to the plane is less than the radius.
 					//XMVECTOR Intersection = DirectX::Internal::PointOnPlaneInsideTriangle(Point0, p0, p1, p2);
 
-					// Compute the cross products of the vector from the base of each edge to 
+					// Compute the cross products of the vector from the base of each edge to
 					// the point with each edge vector.
 					XMVECTOR C0 = XMVector3Cross(XMVectorSubtract(Point0, p0), XMVectorSubtract(p1, p0));
 					XMVECTOR C1 = XMVector3Cross(XMVectorSubtract(Point0, p1), XMVectorSubtract(p2, p1));
@@ -8225,21 +8253,21 @@ namespace wi::scene
 					// Edge 0,1
 					XMVECTOR Point1 = wi::math::ClosestPointOnLineSegment(p0, p1, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point1)), RadiusSq));
 
 					// Edge 1,2
 					XMVECTOR Point2 = wi::math::ClosestPointOnLineSegment(p1, p2, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point2)), RadiusSq));
 
 					// Edge 2,0
 					XMVECTOR Point3 = wi::math::ClosestPointOnLineSegment(p2, p0, Center);
 
-					// If the distance to the center of the sphere to the point is less than 
+					// If the distance to the center of the sphere to the point is less than
 					// the radius of the sphere then it must intersect.
 					Intersection = XMVectorOrInt(Intersection, XMVectorLessOrEqual(XMVector3LengthSq(XMVectorSubtract(Center, Point3)), RadiusSq));
 
@@ -8285,8 +8313,8 @@ namespace wi::scene
 							}
 							else
 							{
-								// The line segment that makes the spine of the capsule has 
-								// intersected the triangle plane, so interSectionVec ~= Zero, 
+								// The line segment that makes the spine of the capsule has
+								// intersected the triangle plane, so interSectionVec ~= Zero,
 								// and depth ~= capsule.radius.  Use the triangle normal.
 								XMVECTOR CandNorm;
 								if (onBackside)
@@ -8476,7 +8504,7 @@ namespace wi::scene
 			}
 		}
 	}
-	
+
 	void Scene::VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract, uint32_t filterMask, uint32_t layerMask, uint32_t lod)
 	{
 		wi::jobsystem::context ctx;
