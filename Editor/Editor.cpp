@@ -9,8 +9,8 @@
 // some application parameters can be overwritten in the executable by finding the 256 byte long pattern in the first member:
 ApplicationExeCustomization exe_customization = {
 	"Wicked Editor                                                                                                          ",
-	wi::Color(130, 210, 220, 255),
-	wi::Color(17, 30, 43, 255)
+	wi::Color(249, 249, 249, 255),
+	wi::Color(29, 29, 29, 255)
 };
 
 using namespace wi::graphics;

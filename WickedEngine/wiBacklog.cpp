@@ -28,12 +28,14 @@ namespace wi::backlog
 	float pos = 5;
 	float scroll = 0;
 	int historyPos = 0;
-	wi::font::Params font_params;
-	wi::Color backgroundColor = wi::Color(17, 30, 43, 255);
-	Texture backgroundTex;
+	wi::font::Params font_params = []() {
+		wi::font::Params params;
+		params.color = wi::Color(249, 249, 249, 255);
+		return params;
+	}();
+	wi::Color backgroundColor = wi::Color(29, 29, 29, 255);
 	bool refitscroll = false;
 	wi::gui::TextInputField inputField;
-	wi::gui::Button toggleButton;
 	wi::gui::GUI GUI;
 
 	bool locked = false;
@@ -101,6 +103,10 @@ namespace wi::backlog
 
 			if (isActive())
 			{
+				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+				{
+					Toggle();
+				}
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_UP))
 				{
 					historyPrev();
@@ -150,34 +156,7 @@ namespace wi::backlog
 						}
 						inputField.SetText("");
 					});
-					wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
-					wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
-					wi::Color theme_color_active = wi::Color::White();
-					wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
-					inputField.SetColor(theme_color_idle); // all states the same, it's gonna be always active anyway
-					inputField.font.params.color = wi::Color(160, 240, 250, 255);
-					inputField.font.params.shadowColor = wi::Color::Transparent();
-
-					toggleButton.Create("V");
-					toggleButton.OnClick([](wi::gui::EventArgs args) {
-						Toggle();
-						});
-					toggleButton.SetColor(theme_color_idle, wi::gui::IDLE);
-					toggleButton.SetColor(theme_color_focus, wi::gui::FOCUS);
-					toggleButton.SetColor(theme_color_active, wi::gui::ACTIVE);
-					toggleButton.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
-					toggleButton.SetShadowRadius(5);
-					toggleButton.SetShadowColor(wi::Color(80, 140, 180, 100));
-					toggleButton.font.params.color = wi::Color(160, 240, 250, 255);
-					toggleButton.font.params.rotation = XM_PI;
-					toggleButton.font.params.size = 24;
-					toggleButton.font.params.scaling = 3;
-					toggleButton.font.params.shadowColor = wi::Color::Transparent();
-					for (int i = 0; i < arraysize(toggleButton.sprites); ++i)
-					{
-						toggleButton.sprites[i].params.enableCornerRounding();
-						toggleButton.sprites[i].params.corners_rounding[2].radius = 50;
-					}
+					inputField.SetColor(backgroundColor);
 				}
 				if (inputField.GetState() != wi::gui::ACTIVE)
 				{
@@ -201,13 +180,9 @@ namespace wi::backlog
 		}
 		pos = wi::math::Clamp(pos, -canvas.GetLogicalHeight(), 0);
 
-		inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth() - 40, 20));
-		inputField.SetPos(XMFLOAT2(20, canvas.GetLogicalHeight() - 40 + pos));
+		inputField.SetSize(XMFLOAT2(canvas.GetLogicalWidth(), 20));
+		inputField.SetPos(XMFLOAT2(0, canvas.GetLogicalHeight() - 20 + pos));
 		inputField.Update(canvas, dt);
-
-		toggleButton.SetSize(XMFLOAT2(100, 100));
-		toggleButton.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - toggleButton.GetSize().x - 20, 20 + pos));
-		toggleButton.Update(canvas, dt);
 	}
 	void Draw(
 		const wi::Canvas& canvas,
@@ -226,38 +201,17 @@ namespace wi::backlog
 		wi::image::Params fx = wi::image::Params((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
 		fx.pos = XMFLOAT3(0, pos, 0);
 		fx.opacity = wi::math::Lerp(0.9f, 0, saturate(-pos / canvas.GetLogicalHeight()));
+		fx.color = backgroundColor;
 		if (colorspace != ColorSpace::SRGB)
 		{
 			fx.enableLinearOutputMapping(9);
 		}
-		fx.color = backgroundColor;
-		wi::image::Draw(backgroundTex.IsValid() ? &backgroundTex : nullptr, fx, cmd);
-
-		wi::image::Params inputbg;
-		inputbg.color = wi::Color(80, 140, 180, 200);
-		inputbg.pos = inputField.translation;
-		inputbg.pos.x -= 8;
-		inputbg.pos.y -= 8;
-		inputbg.siz = inputField.GetSize();
-		inputbg.siz.x += 16;
-		inputbg.siz.y += 16;
-		inputbg.enableCornerRounding();
-		inputbg.corners_rounding[0].radius = 10;
-		inputbg.corners_rounding[1].radius = 10;
-		inputbg.corners_rounding[2].radius = 10;
-		inputbg.corners_rounding[3].radius = 10;
-		if (colorspace != ColorSpace::SRGB)
-		{
-			inputbg.enableLinearOutputMapping(9);
-		}
-		wi::image::Draw(nullptr, inputbg, cmd);
+		wi::image::Draw(nullptr, fx, cmd);
 
 		if (colorspace != ColorSpace::SRGB)
 		{
 			inputField.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
 			inputField.font.params.enableLinearOutputMapping(9);
-			toggleButton.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
-			toggleButton.font.params.enableLinearOutputMapping(9);
 		}
 		inputField.Render(canvas, cmd);
 
@@ -265,11 +219,6 @@ namespace wi::backlog
 		rect.left = 0;
 		rect.right = (int32_t)canvas.GetPhysicalWidth();
 		rect.top = 0;
-		rect.bottom = (int32_t)canvas.GetPhysicalHeight();
-		device->BindScissorRects(1, &rect, cmd);
-
-		toggleButton.Render(canvas, cmd);
-
 		rect.bottom = int32_t(canvas.LogicalToPhysical(inputField.GetPos().y - 15));
 		device->BindScissorRects(1, &rect, cmd);
 
@@ -305,6 +254,7 @@ namespace wi::backlog
 		params.posX = 5;
 		params.posY = pos + scroll;
 		params.h_wrap = canvas.GetLogicalWidth() - params.posX;
+		params.color = font_params.color;
 		if (colorspace != ColorSpace::SRGB)
 		{
 			params.enableLinearOutputMapping(9);
@@ -443,10 +393,6 @@ namespace wi::backlog
 		}
 	}
 
-	void setBackground(Texture* texture)
-	{
-		backgroundTex = *texture;
-	}
 	void setBackgroundColor(wi::Color color)
 	{
 		backgroundColor = color;
