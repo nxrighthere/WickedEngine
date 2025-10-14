@@ -2,6 +2,7 @@
 #include "wiBacklog.h"
 #include "wiLua.h"
 #include "wiMath_BindLua.h"
+#include "wiHelper.h"
 
 #include <string>
 
@@ -126,6 +127,36 @@ namespace wi::lua::backlog
 		wi::backlog::UnblockLuaExecution();
 		return 0;
 	}
+	int backlog_open(lua_State* L)
+	{
+		std::string logfile = wi::helper::GetCurrentPath() + "/log.txt";
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		std::string op = "start \"\" \"" + logfile + "\"";
+		int status = system(op.c_str());
+		if (status == 0)
+		{
+			wi::backlog::post("Opening log file: " + logfile);
+		}
+		else
+		{
+			wi::backlog::post("Failed to open log file: " + logfile, wi::backlog::LogLevel::Error);
+		}
+#elif defined(PLATFORM_LINUX)
+		std::string op = "xdg-open \"" + logfile + "\"";
+		int status = system(op.c_str());
+		if (status == 0)
+		{
+			wi::backlog::post("Opening log file: " + logfile);
+		}
+		else
+		{
+			wi::backlog::post("Failed to open log file: " + logfile, wi::backlog::LogLevel::Error);
+		}
+#else
+		wi::backlog::post("backlog_open(): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
+#endif
+		return 0;
+	}
 
 	void Bind()
 	{
@@ -143,6 +174,7 @@ namespace wi::lua::backlog
 			wi::lua::RegisterFunc("backlog_unlock", backlog_unlock);
 			wi::lua::RegisterFunc("backlog_blocklua", backlog_blocklua);
 			wi::lua::RegisterFunc("backlog_unblocklua", backlog_unblocklua);
+			wi::lua::RegisterFunc("backlog_open", backlog_open);
 		}
 	}
 }
