@@ -214,7 +214,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		MoveWindow(hWnd, 0, 0, width, height, FALSE);
 	}
 	SendMessage(hWnd, WM_SETTINGCHANGE, 0, 0); // trigger dark mode theme detection
-	ShowWindow(hWnd, nCmdShow);
+	ShowWindow(hWnd, SW_SHOWMAXIMIZED);
 	UpdateWindow(hWnd);
 	DragAcceptFiles(hWnd, TRUE);
 
