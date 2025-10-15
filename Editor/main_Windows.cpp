@@ -152,7 +152,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool borderless = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	std::string config_file = "config.ini";
+	std::ifstream custom_check("custom.ini");
+	if (custom_check.good())
+	{
+		config_file = "custom.ini";
+	}
+	custom_check.close();
+
+	if (editor.config.Open(config_file.c_str()))
 	{
 		if (editor.config.Has("width"))
 		{
@@ -163,7 +171,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		borderless = editor.config.GetBool("borderless");
 		editor.allow_hdr = editor.config.GetBool("allow_hdr");
 
-		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
+		wilog("%s loaded in %.2f milliseconds\n", config_file.c_str(), (float)timer.elapsed_milliseconds());
 	}
 
 	HWND hWnd = NULL;
