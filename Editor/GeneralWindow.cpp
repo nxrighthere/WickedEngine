@@ -186,7 +186,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&forceDiffuseLightingCheckBox);
 
 	focusModeCheckBox.Create(ICON_EYE " Focus mode GUI: ");
-	focusModeCheckBox.SetCheckText(ICON_EYE);
 	focusModeCheckBox.SetTooltip("Reduce the amount of effects in the editor GUI to improve accessibility");
 	if (editor->main->config.GetSection("options").Has("focus_mode"))
 	{

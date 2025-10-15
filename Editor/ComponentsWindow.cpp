@@ -19,7 +19,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.SetMaxVisibleItemCount(16);
 	filterCombo.SetDropArrowEnabled(false);
 	filterCombo.SetFixedDropWidth(40);
-	filterCombo.AddItem("*", (uint64_t)Filter::All);
+	filterCombo.AddItem(ICON_FA_FILTER, (uint64_t)Filter::All);
 	filterCombo.AddItem(ICON_TRANSFORM, (uint64_t)Filter::Transform);
 	filterCombo.AddItem(ICON_MATERIAL, (uint64_t)Filter::Material);
 	filterCombo.AddItem(ICON_MESH, (uint64_t)Filter::Mesh);
