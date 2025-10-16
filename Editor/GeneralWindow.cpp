@@ -14,6 +14,7 @@ enum class Theme : uint64_t
 	Soft,
 	Hacking,
 	Nord,
+	DarkGray,
 
 	User = ~0ull - 1,
 	Custom = ~0ull
@@ -486,6 +487,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(236, 239, 244, 255);
 			theme_color_gradient = XMFLOAT4(1, 1, 1, 0.66f);
 			theme_color_wave = wi::Color(58, 75, 93, 153);
+			editor->themeEditorWnd.imageResource = {};
+			break;
+		case Theme::DarkGray:
+			editor->main->config.GetSection("options").Set("theme", "Dark Gray");
+			theme_color_idle = wi::Color(49, 49, 49, 255);
+			theme_color_focus = wi::Color(66, 66, 66, 255);
+			theme_color_background = wi::Color(37, 37, 37, 255);
+			theme.shadow_color = wi::Color(37, 37, 37, 255);
+			theme.font.color = wi::Color(249, 249, 249, 255);
+			theme_color_gradient = XMFLOAT4(58, 58, 58, 1.0f);
+			theme_color_wave = wi::Color(38, 38, 38, 255);
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::User:
@@ -1400,6 +1412,7 @@ void GeneralWindow::ReloadThemes()
 	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
+	themeCombo.AddItem("Dark Gray " ICON_FA_GEAR, (uint64_t)Theme::DarkGray);
 
 	wi::vector<std::string> custom_themes;
 	wi::helper::GetFileNamesInDirectory(wi::helper::GetCurrentPath() + "/themes/", [&](std::string filename) {
@@ -1430,6 +1443,10 @@ void GeneralWindow::ReloadThemes()
 	else if (currentTheme == "Nord")
 	{
 		themeCombo.SetSelectedByUserdata((uint64_t)Theme::Nord);
+	}
+	else if (currentTheme == "Dark Gray")
+	{
+		themeCombo.SetSelectedByUserdata((uint64_t)Theme::DarkGray);
 	}
 	else
 	{
