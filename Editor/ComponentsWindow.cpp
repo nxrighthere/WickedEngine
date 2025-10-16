@@ -1327,12 +1327,31 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 		}
 	}
 
+	// Collect children and sort them by name before adding
+	wi::vector<Entity> children;
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
 		if (scene.hierarchy[i].parentID == entity)
 		{
-			PushToEntityTree(scene.hierarchy.GetEntity(i), level + 1);
+			children.push_back(scene.hierarchy.GetEntity(i));
 		}
+	}
+
+	// Sort children by name
+	std::sort(children.begin(), children.end(), [&scene](Entity a, Entity b) {
+		const NameComponent* name_a = scene.names.GetComponent(a);
+		const NameComponent* name_b = scene.names.GetComponent(b);
+
+		std::string str_a = (name_a && !name_a->name.empty()) ? name_a->name : "[no_name] " + std::to_string(a);
+		std::string str_b = (name_b && !name_b->name.empty()) ? name_b->name : "[no_name] " + std::to_string(b);
+
+		return wi::helper::toUpper(str_a) < wi::helper::toUpper(str_b);
+	});
+
+	// Add sorted children
+	for (Entity child : children)
+	{
+		PushToEntityTree(child, level + 1);
 	}
 }
 void ComponentsWindow::RefreshEntityTree()
@@ -1358,13 +1377,31 @@ void ComponentsWindow::RefreshEntityTree()
 
 	// Add items to level 0 that are not in hierarchy (not in hierarchy can also mean top level parent):
 	//	Note that PushToEntityTree will add children recursively, so this is all we need
+	wi::vector<Entity> topLevelEntities;
 	for (auto& x : entitytree_temp_items)
 	{
 		const HierarchyComponent* hier = scene.hierarchy.GetComponent(x);
 		if (hier == nullptr || hier->parentID == INVALID_ENTITY || entitytree_temp_items.count(hier->parentID) == 0)
 		{
-			PushToEntityTree(x, 0);
+			topLevelEntities.push_back(x);
 		}
+	}
+
+	// Sort top-level entities by name
+	std::sort(topLevelEntities.begin(), topLevelEntities.end(), [&scene](Entity a, Entity b) {
+		const NameComponent* name_a = scene.names.GetComponent(a);
+		const NameComponent* name_b = scene.names.GetComponent(b);
+
+		std::string str_a = (name_a && !name_a->name.empty()) ? name_a->name : "[no_name] " + std::to_string(a);
+		std::string str_b = (name_b && !name_b->name.empty()) ? name_b->name : "[no_name] " + std::to_string(b);
+
+		return wi::helper::toUpper(str_a) < wi::helper::toUpper(str_b);
+	});
+
+	// Add sorted top-level entities
+	for (auto& x : topLevelEntities)
+	{
+		PushToEntityTree(x, 0);
 	}
 
 	entitytree_added_items.clear();
