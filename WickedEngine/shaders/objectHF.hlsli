@@ -122,7 +122,7 @@ struct VertexInput
 {
 	uint vertexID : SV_VertexID;
 	uint instanceID : SV_InstanceID;
-	
+
 #ifdef OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 	uint GetPrimitiveID()
 	{
@@ -179,7 +179,7 @@ struct VertexInput
 			return 1;
 		return bindless_buffers_half4[descriptor_index(GetMesh().vb_col)][GetVertexID()];
 	}
-	
+
 	float3 GetNormal()
 	{
 		[branch]
@@ -271,7 +271,7 @@ struct VertexSurface
 		tangent = input.GetTangent();
 		tangent.xyz = mul(input.GetInstance().transformRaw.GetMatrixAdjoint(), tangent.xyz);
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
-		
+
 		uvsets = input.GetUVSets();
 		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
@@ -363,7 +363,7 @@ struct PixelInput
 		return pointer.GetCameraIndex();
 	}
 #endif // OBJECTSHADER_USE_CAMERAINDEX
-	
+
 #ifdef OBJECTSHADER_USE_UVSETS
 	inline float4 GetUVSets()
 	{
@@ -400,7 +400,7 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	surface.create(GetMaterial(), input);
 
 	PixelInput Out;
-	
+
 	Out.pos = surface.position;
 
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
@@ -408,7 +408,7 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 #else
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
-	
+
 #if defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
 	Out.primitiveID = input.GetPrimitiveID();
 #endif // defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
@@ -521,14 +521,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 	const min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	const float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp; // use pixel center!
-	
+
 	Surface surface;
 	surface.init();
 	surface.P = input.GetPos3D();
 	surface.V = input.GetViewVector();
 	float dist = length(surface.V);
 	surface.V /= dist;
-	
+
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets = input.GetUVSets();
 #endif // OBJECTSHADER_USE_UVSETS
@@ -562,7 +562,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	surface.T.w = surface.T.w < 0 ? -1 : 1;
 	half3 bitangent = cross(surface.T.xyz, input.nor) * surface.T.w;
 	float3x3 TBN = float3x3(surface.T.xyz, bitangent, input.nor); // unnormalized TBN! http://www.mikktspace.com/
-	
+
 	surface.T.xyz = normalize(surface.T.xyz);
 
 #ifdef PARALLAXOCCLUSIONMAPPING
@@ -603,7 +603,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 		surface.baseColor *= material.textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 	}
 #endif // INTERIORMAPPING
-	
+
 #if defined(PREPASS) || defined(TRANSPARENT)
 	[branch]
 	if (material.textures[TRANSPARENCYMAP].IsValid())
@@ -675,7 +675,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 			{
 				uint chunk_idx = flatten2D(chunk_coord + terrain.chunk_buffer_range, terrain.chunk_buffer_range * 2 + 1);
 				ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[descriptor_index(terrain.chunk_buffer)][chunk_idx];
-				
+
 				[branch]
 				if(chunk.heightmap >= 0)
 				{
@@ -686,8 +686,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 					float terrain_height0 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0).r;
 					float terrain_height1 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0, int2(1, 0)).r;
 					float terrain_height2 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0, int2(0, 1)).r;
-					float3 P0 = float3(0, terrain_height0, 0); 
-					float3 P1 = float3(1, terrain_height1, 0); 
+					float3 P0 = float3(0, terrain_height0, 0);
+					float3 P1 = float3(1, terrain_height1, 0);
 					float3 P2 = float3(0, terrain_height2, 1);
 					float3 terrain_normal = normalize(cross(P2 - P0, P1 - P0));
 					float terrain_height = lerp(terrain.min_height, terrain.max_height, terrain_height0);
@@ -744,10 +744,63 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 #ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
+	half3 finalBumpColor = surface.bumpColor;
+
+	// Combine base normal map with detail normal map in tangent space before converting to world space
 	[branch]
-	if (any(surface.bumpColor))
+	if (material.textures[DETAILNORMALMAP].IsValid() && any(surface.bumpColor))
 	{
-		surface.N = normalize(mul(surface.bumpColor, TBN));
+		half detailScale = material.GetDetailMapScale();
+		half detailDistance = material.GetDetailMapDistance();
+
+		// Calculate distance-based fade
+		// When detailDistance = 0, detail is always visible
+		// When detailDistance > 0, detail fades out as camera moves away
+		half detailBlend = 1.0;
+		if (detailDistance > 0.0)
+		{
+			half distanceToCamera = length(surface.P - GetCamera().position);
+			// Fade in from (distance * 2) to distance, then stay at full strength when closer
+			half fadeStart = detailDistance * 2.0;
+			detailBlend = saturate((fadeStart - distanceToCamera) / detailDistance);
+		}
+
+		// Calculate gradients on base UVs
+		float4 uvsets_dx = ddx_coarse(uvsets);
+		float4 uvsets_dy = ddy_coarse(uvsets);
+
+		uint detailUVSet = material.textures[DETAILNORMALMAP].GetUVSet();
+		float2 detailUV = (detailUVSet == 0 ? uvsets.xy : uvsets.zw) * detailScale;
+		float2 detailUV_dx = (detailUVSet == 0 ? uvsets_dx.xy : uvsets_dx.zw) * detailScale;
+		float2 detailUV_dy = (detailUVSet == 0 ? uvsets_dy.xy : uvsets_dy.zw) * detailScale;
+
+		float4 detailUVSets = detailUVSet == 0 ? float4(detailUV, uvsets.zw) : float4(uvsets.xy, detailUV);
+		float4 detailUVSets_dx = detailUVSet == 0 ? float4(detailUV_dx, uvsets_dx.zw) : float4(uvsets_dx.xy, detailUV_dx);
+		float4 detailUVSets_dy = detailUVSet == 0 ? float4(detailUV_dy, uvsets_dy.zw) : float4(uvsets_dy.xy, detailUV_dy);
+
+		// Only sample and blend if there's any contribution
+		[branch]
+		if (detailBlend > 0.0)
+		{
+			// Sample detail normal with explicit gradients
+			half3 detailNormal = half3(material.textures[DETAILNORMALMAP].SampleGrad(sampler_objectshader, detailUVSets, detailUVSets_dx, detailUVSets_dy).rg, 1);
+			detailNormal = detailNormal * 2 - 1;
+
+			// Blend detail normal with base normal using reoriented normal mapping (UDN blending)
+			// This properly combines two normal maps in tangent space
+			half3 blendedNormal = normalize(half3(
+				surface.bumpColor.xy + detailNormal.xy * detailBlend,
+				surface.bumpColor.z
+			));
+
+			finalBumpColor = blendedNormal;
+		}
+	}
+
+	[branch]
+	if (any(finalBumpColor))
+	{
+		surface.N = normalize(mul(finalBumpColor, TBN));
 	}
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
@@ -765,8 +818,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 
 	surface.create(material, surface.baseColor, surfaceMap, specularMap);
-	
-	
+
+
 
 #ifdef OBJECTSHADER_USE_COMMON
 	half wet = input.ao_wet.y;
@@ -891,7 +944,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	Lighting lighting;
 	lighting.create(0, 0, ambient, 0);
 
-	
+
 	half4 color = surface.baseColor;
 
 #ifdef WATER
@@ -941,7 +994,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 #ifdef TRANSPARENT
 	surface.transmission = lerp(material.GetTransmission(), 1, material.GetCloak());
-	
+
 	[branch]
 	if (surface.transmission > 0)
 	{
@@ -1022,7 +1075,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	{
 		// Water refraction:
 		float4 water_plane = camera.reflection_plane;
-		const float camera_above_water = dot(float4(camera.position, 1), water_plane) < 0; 
+		const float camera_above_water = dot(float4(camera.position, 1), water_plane) < 0;
 		Texture2D<half4> texture_refraction = bindless_textures_half4[descriptor_index(camera.texture_refraction_index)];
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.bumpColor.rg;
@@ -1105,7 +1158,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef DISABLE_ALPHATEST
 	coverage = AlphaToCoverage(color.a, alphatest, dithering, input.pos); // opaque soft alpha test (MSAA, temporal AA support)
 #endif // DISABLE_ALPHATEST
-	
+
 	// end point:
 #ifdef PREPASS
 #ifndef DEPTHONLY

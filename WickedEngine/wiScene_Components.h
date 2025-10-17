@@ -218,6 +218,9 @@ namespace wi::scene
 		XMFLOAT3 interiorMappingScale = XMFLOAT3(1, 1, 1);
 		XMFLOAT3 interiorMappingOffset = XMFLOAT3(0, 0, 0);
 
+		float detailMapScale = 1.0f;
+		float detailMapDistance = 0.0f;
+
 		enum TEXTURESLOT
 		{
 			BASECOLORMAP,
@@ -235,6 +238,7 @@ namespace wi::scene
 			SPECULARMAP,
 			ANISOTROPYMAP,
 			TRANSPARENCYMAP,
+			DETAILNORMALMAP,
 
 			TEXTURESLOT_COUNT
 		};

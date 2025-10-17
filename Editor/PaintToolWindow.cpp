@@ -218,6 +218,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	textureSlotComboBox.AddItem("SpecularMap (RGBA)", MaterialComponent::SPECULARMAP);
 	textureSlotComboBox.AddItem("AnisotropyMap (RG)", MaterialComponent::ANISOTROPYMAP);
 	textureSlotComboBox.AddItem("TransparencyMap (R)", MaterialComponent::TRANSPARENCYMAP);
+	textureSlotComboBox.AddItem("DetailNormalMap (RG)", MaterialComponent::DETAILNORMALMAP);
 	textureSlotComboBox.SetSelected(0);
 	AddWidget(&textureSlotComboBox);
 

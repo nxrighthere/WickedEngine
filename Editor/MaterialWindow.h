@@ -44,6 +44,8 @@ public:
 	wi::gui::Slider anisotropyRotationSlider;
 	wi::gui::Slider displacementMappingSlider;
 	wi::gui::Slider subsurfaceScatteringSlider;
+	wi::gui::Slider detailMapScaleSlider;
+	wi::gui::Slider detailMapDistanceSlider;
 	wi::gui::Slider texAnimFrameRateSlider;
 	wi::gui::Slider texAnimDirectionSliderU;
 	wi::gui::Slider texAnimDirectionSliderV;

@@ -412,6 +412,24 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&subsurfaceScatteringSlider);
 
+	detailMapScaleSlider.Create(0.1f, 50.0f, 1.0f, 1000, "Detail Map Scale: ");
+	detailMapScaleSlider.SetTooltip("Scale/tiling multiplier for the detail normal map. Higher values create finer detail.");
+	detailMapScaleSlider.SetSize(XMFLOAT2(wid, hei));
+	detailMapScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	detailMapScaleSlider.OnSlide(forEachSelected([] (auto material, auto args) {
+		material->detailMapScale = args.fValue;
+	}));
+	AddWidget(&detailMapScaleSlider);
+
+	detailMapDistanceSlider.Create(0.0f, 100.0f, 0.0f, 1000, "Detail Map Distance: ");
+	detailMapDistanceSlider.SetTooltip("Distance from camera at which detail map starts to fade in.\n0 = always visible, higher values = visible only when close.");
+	detailMapDistanceSlider.SetSize(XMFLOAT2(wid, hei));
+	detailMapDistanceSlider.SetPos(XMFLOAT2(x, y += step));
+	detailMapDistanceSlider.OnSlide(forEachSelected([] (auto material, auto args) {
+		material->detailMapDistance = args.fValue;
+	}));
+	AddWidget(&detailMapDistanceSlider);
+
 	texAnimFrameRateSlider.Create(0, 60, 0, 60, "Texcoord anim FPS: ");
 	texAnimFrameRateSlider.SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
 	texAnimFrameRateSlider.SetSize(XMFLOAT2(wid, hei));
@@ -680,6 +698,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		case MaterialComponent::TRANSPARENCYMAP:
 			textureSlotComboBox.AddItem("Transparency map");
 			break;
+		case MaterialComponent::DETAILNORMALMAP:
+			textureSlotComboBox.AddItem("DetailNormal map");
+			break;
 		default:
 			break;
 		}
@@ -734,6 +755,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			break;
 		case MaterialComponent::TRANSPARENCYMAP:
 			tooltiptext = "R: transparency.";
+			break;
+		case MaterialComponent::DETAILNORMALMAP:
+			tooltiptext = "RG: Detail Normal map for close-up surface detail. Use detail scale and distance sliders to control visibility.";
 			break;
 		default:
 			break;
@@ -899,6 +923,8 @@ void MaterialWindow::SetEntity(Entity entity)
 		anisotropyRotationSlider.SetValue(wi::math::RadiansToDegrees(material->anisotropy_rotation));
 		displacementMappingSlider.SetValue(material->displacementMapping);
 		subsurfaceScatteringSlider.SetValue(material->subsurfaceScattering.w);
+		detailMapScaleSlider.SetValue(material->detailMapScale);
+		detailMapDistanceSlider.SetValue(material->detailMapDistance);
 		texAnimFrameRateSlider.SetValue(material->texAnimFrameRate);
 		texAnimDirectionSliderU.SetValue(material->texAnimDirection.x);
 		texAnimDirectionSliderV.SetValue(material->texAnimDirection.y);
@@ -1081,6 +1107,8 @@ void MaterialWindow::ResizeLayout()
 	layout.add(anisotropyRotationSlider);
 	layout.add(displacementMappingSlider);
 	layout.add(subsurfaceScatteringSlider);
+	layout.add(detailMapScaleSlider);
+	layout.add(detailMapDistanceSlider);
 	layout.add(texAnimFrameRateSlider);
 	layout.add(texAnimDirectionSliderU);
 	layout.add(texAnimDirectionSliderV);

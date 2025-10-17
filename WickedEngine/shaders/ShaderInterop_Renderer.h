@@ -99,6 +99,7 @@ enum TEXTURESLOT
 	SPECULARMAP,
 	ANISOTROPYMAP,
 	TRANSPARENCYMAP,
+	DETAILNORMALMAP,
 
 	TEXTURESLOT_COUNT
 };
@@ -379,6 +380,8 @@ struct alignas(16) ShaderMaterial
 
 	uint4 userdata;
 
+	uint4 detailmap; // detailMapScale (x), detailMapDistance (y) stored as f16, z/w reserved for future use
+
 	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
 
 	void init()
@@ -406,6 +409,8 @@ struct alignas(16) ShaderMaterial
 		shaderType_meshblend = 0;
 
 		userdata = uint4(0, 0, 0, 0);
+
+		detailmap = uint4(0, 0, 0, 0);
 
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 		{
@@ -439,6 +444,8 @@ struct alignas(16) ShaderMaterial
 	inline half GetAnisotropySin() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).y; }
 	inline half GetAnisotropyCos() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).z; }
 	inline half GetTerrainBlendRcp() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).w; }
+	inline half GetDetailMapScale() { return f16tof32(detailmap.x); }
+	inline half GetDetailMapDistance() { return f16tof32(detailmap.y); }
 	inline half3 GetInteriorScale() { return unpack_half3(subsurfaceScattering); }
 	inline half3 GetInteriorOffset() { return unpack_half3(subsurfaceScattering_inv); }
 	inline half2 GetInteriorSinCos() { return half2(unpack_half4(subsurfaceScattering).w, unpack_half4(subsurfaceScattering_inv).w); }

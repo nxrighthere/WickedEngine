@@ -270,6 +270,13 @@ namespace wi::scene
 			{
 				archive >> mesh_blend;
 			}
+			if (seri.GetVersion() >= 12)
+			{
+				archive >> detailMapScale;
+				archive >> detailMapDistance;
+				archive >> textures[DETAILNORMALMAP].name;
+				archive >> textures[DETAILNORMALMAP].uvset;
+			}
 
 			for (auto& x : textures)
 			{
@@ -448,6 +455,13 @@ namespace wi::scene
 			if (seri.GetVersion() >= 11)
 			{
 				archive << mesh_blend;
+			}
+			if (seri.GetVersion() >= 12)
+			{
+				archive << detailMapScale;
+				archive << detailMapDistance;
+				archive << wi::helper::GetPathRelative(dir, textures[DETAILNORMALMAP].name);
+				archive << textures[DETAILNORMALMAP].uvset;
 			}
 		}
 	}
