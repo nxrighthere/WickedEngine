@@ -157,6 +157,7 @@ namespace wi::backlog
 						inputField.SetText("");
 					});
 					inputField.SetColor(backgroundColor);
+					inputField.SetShadowRadius(0);
 				}
 				if (inputField.GetState() != wi::gui::ACTIVE)
 				{
